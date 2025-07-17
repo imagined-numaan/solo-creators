@@ -1,2 +1,2 @@
 # solo-creators
-A repository that contains code for profile analysis.
+A repository to build the random creators feature for SOLO. 

@@ -1,0 +1,24 @@
+{
+  "name": "solo-creators",
+  "version": "1.0.0",
+  "description": "A repository to build the random creators feature for SOLO.",
+  "main": "./src/index.js",
+  "scripts": {
+    "dev": "tsx ./src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^1.8.0",
+    "axios": "^1.10.0",
+    "dotenv": "^17.0.1",
+    "exifreader": "^4.31.1",
+    "mongoose": "^8.16.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.10"
+  }
+}
