@@ -3,6 +3,7 @@ import initEnv from "../env";
 import { promptsObj } from "./prompts";
 import { parseGeminiJSONResponse, parseGeminiTextResponse } from "../utils/parseResponse";
 import { geminiErrorHandler } from "../errors/gemini_error_handler";
+import { IUser } from "../types/response.types";
 
 const envData = initEnv();
 
@@ -19,16 +20,14 @@ class CreatorProfileAnalyzer {
       properties: {
         isCreator: {
           type: "integer",
-          enum: ["0", "1"],
           description:
-            "Integer representing whether the profile is a creator or not. 1 indicates a creator profile, 0 indicates a non-creator profile.",
+            "String representing whether the profile is a creator or not. '1' indicates a creator profile, '0' indicates a non-creator profile.",
         },
-
         accuracy: {
           type: "number",
           format: "float",
           description:
-            "Float between 0.0 and 1.0 representing the confidence in the classification made by the model. 1.0 is 100% confident, 0.0 is 0% confident.",
+            "Float between 0 and 1 representing the confidence in the classification made by the model. 1 is 100% confident, 0 is 0% confident.",
         },
         reason: {
           type: "string",
@@ -39,8 +38,7 @@ class CreatorProfileAnalyzer {
       required: ["isCreator", "accuracy", "reason"],
       propertyOrdering: ["isCreator", "accuracy", "reason"],
     };
-  }
-
+  }    
   private geminiApi(config: GenerateContentConfig, prompt: string) {
     const contents: Part[] = [{ text: prompt }];
 
@@ -58,18 +56,20 @@ class CreatorProfileAnalyzer {
 
   // this function uses the username, bio and category to classify profiles 
   // as creators or not
-  async analyzeProfile(username: string, biography: string, category: string) {
+  async analyzeProfile(profile: IUser) {
     const prediction = await geminiErrorHandler(async () => {
-      const prompt = promptsObj.creatorAnalysisPrompt(username, biography, category);
+      const prompt = promptsObj.creatorAnalysisPrompt(profile);
 
       const response = await this.geminiApi(
         {
+          
           tools: [{googleSearch: {}}],
         },
         prompt
       );
 
       if (response.text) {
+        console.log(" CREATOR-----------------------", response.text);
         return parseGeminiTextResponse(response.text);
       }
     });

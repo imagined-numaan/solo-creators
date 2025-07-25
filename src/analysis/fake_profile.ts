@@ -28,13 +28,13 @@ class FakeProfileAnalyzer {
           type: "number",
           format: "float",
           description:
-            "Float between 0.0 and 1.0 representing the fake profile score for this feature. Lower scores indicate a higher likelihood of being a real profile. Higher scores indicate a higher likelihood of being a fake profile.",
+            "Float between 0 and 1 representing the fake profile score for this feature. Lower scores indicate a higher likelihood of being a real profile. Higher scores indicate a higher likelihood of being a fake profile. Assign a precise/reliable/accurate float value.",
         },
         accuracy: {
           type: "number",
           format: "float",
           description:
-            "Float between 0.0 and 1.0 representing the confidence in the classification made by the model. 1.0 is 100% confident, 0.0 is 0% confident.",
+            "Float between 0 and 1 representing the confidence in the classification made by the model. 1 is 100% confident, 0 is 0% confident. Assign a precise/reliable/accurate float value.",
         },
         reason: {
           type: "string",
@@ -103,15 +103,16 @@ class FakeProfileAnalyzer {
       const prompt = promptsObj.profilePictureClassificationPrompt();
       const response = await this.geminiApi(
         {
-          responseMimeType: "application/json",
-          responseJsonSchema: this.responseSchema,
+          tools: [{ googleSearch: {} }],
         },
         prompt,
         inlineContent
       );
 
       if (response.text) {
-        return parseGeminiJSONResponse(response.text);
+        console.log("PROFILEEEE-----------------------", response.text);
+
+        return parseGeminiTextResponse(response.text);
       }
     });
     return prediction;
@@ -123,8 +124,10 @@ class FakeProfileAnalyzer {
 
       const response = await this.geminiApi(
         {
-          tools: [{ googleSearch: {} }],
+          responseMimeType: "application/json",
+          responseJsonSchema: this.responseSchema,
         },
+
         prompt
       );
 

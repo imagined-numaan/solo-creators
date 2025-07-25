@@ -22,8 +22,8 @@ export async function fetchProfileInfo(userId: string) {
   }
 }
 
+// todo: add support to fetch multiple followings using max_id
 export default async function fetchFollowingByUserId(userId: number) {
-  // todo: add dynamic max_id for fetching more followings in the url
   const url = `https://${envData.RAPID_API_INSTAGRAM_HOST}/v1/user/following/chunk?user_id=${userId}`;
 
   try {

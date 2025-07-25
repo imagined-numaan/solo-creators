@@ -1,3 +1,5 @@
+import { IUser } from "../types/response.types";
+
 export const promptsObj = {
   usernameClassificationPrompt(username: string) {
     return `
@@ -85,6 +87,14 @@ export const promptsObj = {
     - Remain sensitive to cultural context, aesthetic diversity, and legitimate branding choices.
     - Consider overall image quality, perceived originality, naturalness of facial features (if present), background coherence, and consistency with the username or overall account theme when making your decision.
 
+    Response Format:
+    {
+      "isFake": 0 or 1, // 1 if classified as Fake/Spam/Bot/Automated, 0 if Real
+      "riskScore": float, // Float between 0.0 and 1.0 representing the fake profile score for this feature. (higher score -> fake, lower score -> real)
+      "accuracy": float, // Float between 0.0 and 1.0 representing classification accuracy. Note: This represents the confidence in the classification, not the model's overall accuracy.
+      "reason": string // Concise but detailed explanation for the classification, referring to the Step-by-Step Analysis.
+    }
+
     Before assigning isFake, riskScore, and accuracy, analyze the attribute thoroughly, and compute each score based on the severity, number, and clarity of suspicious patterns—use a scale, not a binary jump.
     `;
   },
@@ -139,14 +149,6 @@ export const promptsObj = {
 
       The given biography is:
       "${biography}"
-
-      Response Format:
-      {
-        "isFake": 0 or 1, // 1 if classified as Fake/Spam/Bot/Automated, 0 if Real
-        "riskScore": float, // Float between 0.0 and 1.0 representing the fake profile score for this feature. (higher score -> fake, lower score -> real)
-        "accuracy": float, // Float between 0.0 and 1.0 representing classification accuracy. Note: This represents the confidence in the classification, not the model's overall accuracy.
-        "reason": string // Concise but detailed explanation for the classification, referring to the Step-by-Step Analysis.
-      }
     `;
   },
 
@@ -195,70 +197,66 @@ export const promptsObj = {
     `;
   },
 
-  creatorAnalysisPrompt(
-    biography: string,
-    category: string,
-    username: string
-  ) {
+  creatorAnalysisPrompt(profile: IUser) {
     return `
-      Creator Category, Biography, and Username Analysis Prompt
-
-      Definition of a Creator:
-      A creator is an individual or small-scale brand that uses their Instagram account to produce, promote, or monetize original content in a specific niche such as fitness, beauty, music, fashion, tech, comedy, or lifestyle. This includes influencers, vloggers, artists, educators, meme pages, streamers, small business owners, and personal brands, but explicitly excludes celebrities (e.g., well-known actors, musicians, or public figures with widespread fame) and large brands/organizations (e.g., corporations, major companies, or established franchises). Creators typically build an audience through consistent, niche-focused content creation.
-
-      Instructions:
-        - Carefully review the content and structure of the biography, the provided account type/category (if available), and the username to identify whether they signal intentional content creation, self-promotion, or branding by a creator (individual or small-scale brand). Do not classify an account as a creator based on vague or decorative language alone.
-        - The given biography is: "${biography}"
-        - The given account type/category is: "${category}"
-        - The given username is: "${username}"
-        - Use the account type/category as a primary signal to inform the classification, ensuring the account aligns with individual or small-scale creators and not celebrities or large brands/organizations. Use the username as a supplementary signal, checking for subtle creator-related hints (e.g., niche-specific terms like "fit," "style," "creates," "vibes") or patterns that align with the biography or category, but recognize that not all creators have explicit creator terms in their usernames.
-        - If needed, perform a Google search using the username and category to verify that the account is not associated with a well-known celebrity or large brand/organization. For example, search for "[username] Instagram [category]" to check for indications of celebrity status or large-scale corporate affiliation.
-
-      Step-by-Step Analysis:
-
-        1. **Content Platform Presence**
-          - Check for links or mentions of platforms like YouTube, Twitch, Linktree, etc., in the biography, indicating individual or small-scale content creation.
-          - If the category indicates a creator-focused niche (e.g., "Blogger," "Content Creator," "Fitness Coach") and does not suggest a celebrity or large brand (e.g., "Actor," "Public Figure," "Brand" without creator context), this strengthens the creator signal.
-          - If the username contains niche-specific or creator-related terms (e.g., "artby," "fitcoach," "travelvibes") that align with the biography or category, this supports the creator signal. A generic or unrelated username (e.g., "john123") does not negate creator status if other signals are strong.
-          - Use a Google search (e.g., "[username] Instagram [category]") to confirm the account is not linked to a celebrity or large brand. If search results indicate widespread fame or corporate affiliation, this weakens the creator signal.
-
-        2. **Creator Role Identification**
-          - Look for self-described roles in the biography that align with individual or small-scale creators, such as “artist,” “influencer,” “coach,” “streamer,” “content creator,” etc. Avoid roles like “actor” or “celebrity” that may indicate widespread fame unless accompanied by clear niche content creation signals.
-          - If the category explicitly states a creator role (e.g., "Influencer," "Artist," "Entrepreneur") and does not imply a celebrity or large organization (e.g., "Actor," "Musician" with fame indicators), consider this a strong indicator of creator status, even if the biography is minimal.
-          - Check the username for terms that suggest a creator role or niche (e.g., "yogawith," "memelord") when consistent with the biography or category. A username lacking explicit creator terms should not discount creator status if the biography or category provides clear evidence.
-          - Verify via Google search that the username and category do not point to a well-known celebrity or large brand. For example, a category like "Musician" with a username like "popstarjane" may require checking if "popstarjane" is a famous artist or a small-scale creator.
-
-        3. **Business or Promotional Intent**
-          - Look for signs of monetization in the biography typical of smaller creators:
-            - Contact info (email, booking)
-            - Phrases like “DM for collabs,” “business inquiries,” “use my code,” etc.
-            - Promo links or affiliate references
-          - If the category suggests a small business or personal brand (e.g., "Small Business," "Personal Blog"), this increases the likelihood of promotional intent. Categories indicating large organizations (e.g., "Brand," "Company") or celebrity status (e.g., "Actor," "Celebrity") should not be classified as creators.
-          - If the username includes promotional or niche-related terms (e.g., "shop," "designs," "studio") that align with the biography or category, this supports the creator signal. A neutral username does not weaken creator status if other indicators are present.
-          - Use a Google search to ensure the username and category do not link to a large brand or celebrity. For instance, a username like "brandxstudio" with a "Brand" category should be checked to confirm it’s not a major corporation.
-
-        4. **Personal or Vague Language**
-          - Bios that are purely personal, vague, or decorative without clear creator signals should not be classified as creator bios, unless the category or username strongly suggests an individual or small-scale creator role (e.g., "Content Creator," "Vlogger," or username like "craftsbymary").
-          - If the category is vague or suggests a celebrity or large organization (e.g., "Celebrity," "Corporation"), rely primarily on the biography and avoid creator classification unless explicit creator intent is present. A username with creator-related terms may provide minor context but should not drive the decision if the biography and category are inconclusive.
-          - Perform a Google search to check if the username or category indicates a celebrity or large brand. If search results show significant media coverage or corporate affiliation, do not classify as a creator.
-
-        5. **Length and Clarity**
-          - Bios that are extremely short, vague, or empty with no creator signal should not be classified as a creator, unless the category or username explicitly indicates an individual or small-scale creator role (e.g., "Blogger," "Vlogger," or username like "travelvibes").
-          - Exception: If there’s a strong platform link in the biography, a category indicating a known creator role, or a username subtly aligned with a creator niche (not associated with celebrities or large organizations), classify with lower confidence.
-          - Use a Google search to verify that a vague bio with a creator-like category or username (e.g., "Blogger," "fitwithjane") is not linked to a celebrity or large brand.
-
-      Response Format:
-      {
-        "isCreator": 0 or 1, // 1 if classified as a creator (individual or small-scale brand), 0 if not a creator
-        "creatorScore": float, // Float between 0.0 and 1.0 representing the likelihood of being a creator (higher score -> more likely creator, lower score -> less likely creator)
-        "accuracy": float, // Float between 0.0 and 1.0 representing confidence in the classification, not the model's overall accuracy
-        "reason": string // Concise but detailed explanation for the classification, referring to the Step-by-Step Analysis and evidence from biography, category, username, and Google search (if performed)
-      }
-
-      Note:
-        - If the biography has partial hints (like a link but no context) and the category is absent, vague, or suggests a celebrity/organization, default to isCreator: 0 unless clear creator intent is expressed by an individual or small-scale brand in the biography or username, confirmed by a Google search if needed.
-        - Use the creatorScore to reflect how strong or clear the indicators are, combining evidence from the biography, the category (if provided), the username (as a supplementary signal), and Google search results (if performed). Prioritize the biography and category when they explicitly indicate an individual or small-scale creator role, and treat the username and Google search as supporting factors, acknowledging that not all creators have explicit creator terms in their usernames.
-        - Make decisions based on the biography content, the provided category (if it exists), the username (as a supporting factor), and Google search results (if needed to rule out celebrity or large brand status) — no assumptions from profile photos or outside data beyond the search.
+  You are a skilled social media analyst tasked with determining whether an Instagram account qualifies as a "creator."
+  
+  ## Definition of a Creator
+  A creator is an individual or a small content-focused group that actively produces and shares original or curated content within a specific niche on Instagram. This includes people creating around topics like fitness, beauty, fashion, technology, travel, education, entertainment, lifestyle, and art. Creators use their accounts to engage an audience through consistent and thematic content output such as posts, reels, stories, and collaborations.
+  
+  Important:
+  - Do **not** classify large brands, corporations, or mainstream celebrities (e.g., actors, musicians, athletes with widespread fame) as creators unless their Instagram behavior clearly reflects personal or small-scale content creation.
+  - Founders, freelancers, or professionals may qualify as creators if their account reflects consistent, thematic content geared toward an audience or community.
+  
+  ## Provided Account Information
+  Evaluate the following details to make your judgment:
+  - Username: "${profile.username}"
+  - Bio: "${profile.biography}"
+  - Category: "${profile.category}"
+  - Is Private: ${profile.is_private}
+  - Follower Count: ${profile.follower_count}
+  - Following Count: ${profile.following_count}
+  
+  ## Key Evaluation Instructions
+  
+  1. **Privacy Status Consideration**
+     - If the account is private (\`is_private = true\`), it is less likely to be a creator. Creators typically maintain public visibility to reach and grow their audience.
+     - If private, classify as \`isCreator: 0\` with high confidence (\`accuracy: 0.9\`), unless strong evidence in the username, bio, or Google results indicates creator behavior.
+  
+  2. **Content Creation Signals**
+     - Look for evidence in the biography or username that suggests the account is producing content (e.g., “sharing daily recipes,” “travel vlogs,” “art reels,” “tech reviews”).
+     - Check for mentions of collaborations, schedules, content types, or links to external platforms (like YouTube, blogs, etc).
+  
+  3. **Follower/Following Pattern**
+     - A higher follower-to-following ratio often indicates audience-building behavior typical of creators.
+     - Large follower counts may indicate celebrity status—check using Google search results.
+     - Small or mid-sized follower counts are common for emerging creators and are valid.
+  
+  4. **Category Analysis**
+     - The account’s category (e.g., "Fitness Trainer", "Artist", "Blogger") can support classification but should not be the sole basis. Always cross-reference with the bio and other details.
+  
+  5. **Username and Bio**
+     - Personal branding in the username or niche-specific wording (e.g., “TechWithNina”, “ArtByJon”) is a positive signal.
+     - Bios showing creative intent, storytelling, teaching, showcasing skills, or content themes indicate creator status.
+     - Avoid classifying accounts focused solely on product promotion or e-commerce without content indicators.
+  
+  6. **Search Verification (if applicable)**
+     - Conduct a Google search using terms like "${profile.username} Instagram ${profile.biography}".
+     - If search results reveal the user is a famous public figure, large brand, or celebrity, classify as non-creator (\`isCreator: 0\`).
+     - Mentions on blogs, YouTube channels, or niche platforms are positive signals of creator activity.
+  
+  ## Output Format
+  Respond in this exact JSON format:
+  
+  \`\`\`json
+  {
+    "isCreator": 0 or 1,         // 1 if the account is a creator, 0 otherwise
+    "accuracy": float,           // Confidence score between 0.0 and 1.0
+    "reason": "Your explanation here referencing profile data and reasoning"
+  }
+  \`\`\`
+  
+  Use complete reasoning in the \`reason\` field. Be objective, structured, and refer directly to elements from the profile and search data.
     `;
   },
 };

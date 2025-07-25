@@ -7,8 +7,8 @@ class ProfileAnalyzer {
   constructor(weights?: Weights) {
     this.weights = weights || {
       username: 0.3,
-      profilePic: 0.4,
-      biography: 0.5,
+      profilePic: 0.5,
+      biography: 0.2,
       private: 0.3,
       followerFollowingRatio: 0.4,
     };
@@ -29,10 +29,12 @@ class ProfileAnalyzer {
 
   private computeRiskScore(predictions: Predictions, weights: Weights) {
     let totalRiskScore = 0;
+    let totalWeight = 0;
     for (const key in predictions) {
       const property = key as keyof Predictions;
       const prediction = predictions[property];
-
+      console.log(prediction);
+      totalWeight += weights[property] * prediction.accuracy;
       // the reason for multiplying by accuracy is to ensure that the risk score is weighted by the confidence of the prediction
       // if the prediction is not accurate, it should not contribute much to the total risk score
       // for example, if the prediction is 0.9 but the accuracy is 0.1, then the risk score will be 0.09
@@ -41,7 +43,7 @@ class ProfileAnalyzer {
         prediction.riskScore * weights[property] * prediction.accuracy;
     }
 
-    return totalRiskScore;
+    return totalWeight > 0 ? totalRiskScore / totalWeight : 0.5;
   }
 
   private computeTotalConfidence(predictions: Predictions) {
@@ -73,14 +75,11 @@ class ProfileAnalyzer {
     // here, i dynamically calculate the penalty bonus based on the number of fake attributes
     // for example, if there are 3 fake attributes, the penalty bonus will be 3 * 0.08 = 0.24
     const penaltyBonus =
-      fakeAttributesCount > 0 ? fakeAttributesCount * 0.08 : 0;
-    const riskScore =
-      totalConfidence > 0.5
-        ? Math.min(
-            1,
-            penaltyBonus + this.computeRiskScore(predictions, weights)
-          )
-        : 0.5;
+      fakeAttributesCount > 0 ? fakeAttributesCount * 0.1 : 0;
+    const riskScore = Math.min(
+      1,
+      penaltyBonus + this.computeRiskScore(predictions, weights)
+    );
 
     return {
       realScore: this.parseScores(1 - riskScore),
@@ -139,22 +138,35 @@ class ProfileAnalyzer {
         followerCount,
         followingCount
       );
+
+      if (
+        !usernamePrediction ||
+        !profilePicPrediction ||
+        !bioPrediction ||
+        !ratioPrediction
+      ) {
+        console.error("Error analyzing profile attributes.");
+        return null;
+      }
+
       const normalizedWeights = this.normalizeWeights(this.weights);
       const predictions: Predictions = {
         username: usernamePrediction,
         profilePic: profilePicPrediction,
         biography: bioPrediction,
         followerFollowingRatio: ratioPrediction,
+        // todo: change riskScore values for each of the private and public status
+        // currently, it is set to 0.5 for both private and public profiles
         private: privateStatus
           ? {
               isFake: 0,
-              riskScore: 0.2,
+              riskScore: 0.5,
               accuracy: 1,
               reason: "Profile is private",
             }
           : {
               isFake: 0,
-              riskScore: 0.1,
+              riskScore: 0.5,
               accuracy: 1,
               reason: "Profile is public",
             },
@@ -165,8 +177,7 @@ class ProfileAnalyzer {
         normalizedWeights,
         0.5
       );
-      console.log(finalScore);
-      return finalScore.isFake;
+      return finalScore;
     } catch (error) {
       console.error("Error analyzing profile:", error);
       return null;
